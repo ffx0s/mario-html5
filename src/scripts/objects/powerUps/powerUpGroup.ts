@@ -34,7 +34,6 @@ export default class PowerUpGroup extends Phaser.GameObjects.Group {
           Math.abs(player.y - powerUp.y) > this.maxY + canvasHeight
         ) {
           powerUp.destroy()
-          console.log('powerUp destroy:::', this)
         }
       }
     })

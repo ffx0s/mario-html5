@@ -106,7 +106,6 @@ export default class Fire {
 
       // 火球与地图的检测
       this.worldCollider = player.scene.physics.add.collider(this.fireBallGroup, worldLayer, (fireBall: any, tile) => {
-        console.log('fireball world', fireBall.isExplode)
         if (!fireBall.isExplode && (fireBall.body.blocked.left || fireBall.body.blocked.right)) {
           fireBall.explode()
         }
@@ -134,7 +133,6 @@ export default class Fire {
     if (emeny.dead) return
     fireBall.explode()
     emeny.die(true)
-    console.log('fireball emeny')
   }
 
   /**

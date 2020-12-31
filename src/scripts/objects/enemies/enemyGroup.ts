@@ -38,7 +38,6 @@ export default class EnemyGroup extends Phaser.GameObjects.Group {
     this.enemiesData = enemiesData
     // @ts-ignore
     this.removeCallback = (enemy: Enemy) => {
-      console.log('pool push::', enemy)
       this.pool.push(enemy)
     }
   }
@@ -56,7 +55,6 @@ export default class EnemyGroup extends Phaser.GameObjects.Group {
       enemy.restore(x, y)
       this.add(enemy)
       this.pool.splice(this.pool.indexOf(enemy), 1)
-      console.log('create from pool: ', enemy)
     } else {
       switch (name) {
         case 'goomba':
@@ -96,7 +94,6 @@ export default class EnemyGroup extends Phaser.GameObjects.Group {
           ) {
             this.killAndHide(enemy)
             this.remove(enemy)
-            console.log('range remove:::', this)
           }
 
           // 切换方向
@@ -104,7 +101,6 @@ export default class EnemyGroup extends Phaser.GameObjects.Group {
           enemy.setFlipX(!isMovingRight)
         } else {
           this.remove(enemy)
-          console.log('active remove:::', this)
         }
       }
     })

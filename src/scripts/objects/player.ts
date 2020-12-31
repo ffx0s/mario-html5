@@ -317,7 +317,6 @@ export default class Player extends Phaser.GameObjects.Sprite {
    * @param replace 是否替换已有的对象
    */
   addPower(name: string, object: Power, replace = false) {
-    console.log('addPower', name)
     if (replace) {
       this.removePower(name)
     }
@@ -331,7 +330,6 @@ export default class Player extends Phaser.GameObjects.Sprite {
    * @param name 能力名称
    */
   removePower(name: string) {
-    console.log('removePower', name)
     if (this.power[name]) {
       this.power[name] = null
     }

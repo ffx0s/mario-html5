@@ -358,7 +358,6 @@ export default class MainScene extends Phaser.Scene {
     if (this.mario.body.blocked.up) {
       // 重置跳跃的计时，阻止维持的跳跃速度
       this.mario.jumpTimer = 0
-      console.log('playerColliderWorld', tile, mario)
 
       // 查找离玩家位置最近的砖块
       let collideTile = tile
@@ -398,7 +397,6 @@ export default class MainScene extends Phaser.Scene {
     if (this.mario.hasPower(Large.name)) {
       enemy.die(true)
     }
-    console.log('brick enemy collider', enemy)
   }
 
   /**
@@ -421,7 +419,6 @@ export default class MainScene extends Phaser.Scene {
     } else {
       this.sound.playAudioSprite('sfx', 'smb_bump')
     }
-    console.log('breakable', tile)
   }
 
   /**
@@ -442,7 +439,6 @@ export default class MainScene extends Phaser.Scene {
     } else {
       new CoinSpin(this, tile.pixelX + 8, tile.pixelY - 10, 'atlas').spin()
     }
-    console.log('questionMark', tile)
   }
 
   /**

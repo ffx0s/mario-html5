@@ -68,7 +68,6 @@ export default class EnemyClass extends Phaser.Physics.Arcade.Sprite {
 
     this.dead = true
     this.scene.sound.playAudioSprite('sfx', 'smb_stomp')
-    console.log('die', this)
 
     if (flipY) {
       this.disableCollide = true
@@ -101,7 +100,5 @@ export default class EnemyClass extends Phaser.Physics.Arcade.Sprite {
     this.disableCollide = false
     this.attackPower = true
     this.enableBody(true, x, y, true, true).clearAlpha().resetFlip()
-
-    console.log('restore', this)
   }
 }
