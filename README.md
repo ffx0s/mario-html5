@@ -2,7 +2,7 @@
 
 使用 Phaser3 和 Typescript 开发，实现了一些基础功能（玩家、敌人、道具、地图砖块、音乐、场景切换等之间的交互）。
 
-Home：<a href="https://ffx0s.github.io/mario-html5/dist" target="_blank">https://ffx0s.github.io/mario-html5/dist</a>
+Home：<a href="https://ffx0s.github.io/mario-html5/dist/" target="_blank">https://ffx0s.github.io/mario-html5/dist/</a>
 
 <br />
 <img src="https://static.webfed.cn/Xnip2020-12-31_22-49-39.jpg">
