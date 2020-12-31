@@ -1,0 +1,43 @@
+{
+  "name": "phaser-project-template",
+  "version": "3.24.1",
+  "description": "Phaser 3 starter template with TypeScript and webpack.",
+  "homepage": "https://github.com/yandeu/phaser-project-template#readme",
+  "main": "index.js",
+  "scripts": {
+    "start": "webpack-dev-server --config webpack/webpack.dev.js",
+    "build": "webpack --config webpack/webpack.prod.js",
+    "bundle": "npm run build",
+    "serve": "serve dist"
+  },
+  "keywords": [
+    "Phaser3",
+    "Mario"
+  ],
+  "template": {
+    "name": "phaser-project-template",
+    "url": "https://github.com/yandeu/phaser-project-template",
+    "author": "Yannick Deubel (https://github.com/yandeu)"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "clean-webpack-plugin": "^3.0.0",
+    "copy-webpack-plugin": "^5.1.1",
+    "html-webpack-plugin": "^3.2.0",
+    "serve": "^11.3.2",
+    "ts-loader": "^5.4.5",
+    "typescript": "^3.9.6",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0",
+    "webpack-merge": "^4.2.2",
+    "webpack-obfuscator": "^0.27.4",
+    "workbox-webpack-plugin": "^5.1.3"
+  },
+  "dependencies": {
+    "phaser": "^3.50.1"
+  }
+}

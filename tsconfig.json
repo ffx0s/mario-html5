@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "target": "es5",
+    "module": "commonjs",
+    "strict": true,
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+    "allowUnreachableCode": false,
+    "sourceMap": true,
+    "strictPropertyInitialization": false,
+    "lib": ["dom", "es5", "esnext"]
+  }
+}
