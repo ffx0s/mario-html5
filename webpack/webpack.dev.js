@@ -6,7 +6,6 @@ const dev = {
   devtool: 'inline-source-map',
   devServer: {
     open: true,
-    host: '0.0.0.0',
   },
 }
 
