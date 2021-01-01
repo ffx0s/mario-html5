@@ -116,6 +116,7 @@ export default class MainScene extends Phaser.Scene {
     this.worldLayer = this.map.createLayer('world', tileset).setCollisionByProperty({ collide: true })
 
     this.add.tileSprite(0, 0, this.worldLayer.width, 500, 'background-clouds')
+    this.add.bitmapText(16, 100, 'font', 'ARROW KEYS MOVE\n\nZ TO FIRE', 8).setDepth(100)
 
     this.blockEmitter = this.add.particles('atlas')
     // 砖块破碎效果
