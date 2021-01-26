@@ -59,6 +59,9 @@ class AnimatedTile {
   }
 }
 
+/**
+ * 实现动画 Tile
+ */
 export default class AnimatedTiles {
   private tiles: AnimatedTile[] = []
 

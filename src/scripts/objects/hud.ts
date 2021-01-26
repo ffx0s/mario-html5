@@ -33,6 +33,10 @@ export default class Hud {
     this[key].value = value
   }
 
+  public getValue(key: string): string | number {
+    return this[key].value
+  }
+
   /**
    * 增加或减少
    * @param key

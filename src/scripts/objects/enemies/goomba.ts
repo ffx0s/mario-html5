@@ -1,4 +1,4 @@
-import Enemy from './enemyClass'
+import { Enemy } from './index'
 
 type Config = {
   scene: Phaser.Scene
@@ -7,7 +7,7 @@ type Config = {
   texture: string
 }
 
-export default class Goomba extends Enemy {
+export class Goomba extends Enemy {
   body: Phaser.Physics.Arcade.Body
 
   constructor({ scene, x, y, texture }: Config) {

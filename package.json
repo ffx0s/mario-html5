@@ -38,6 +38,7 @@
     "workbox-webpack-plugin": "^5.1.3"
   },
   "dependencies": {
-    "phaser": "^3.50.1"
+    "phaser": "^3.52.0",
+    "tsyringe": "^4.4.0"
   }
 }

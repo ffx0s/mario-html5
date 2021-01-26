@@ -7,7 +7,7 @@ type Config = {
   texture: string
 }
 
-export default class PowerUpClass extends Phaser.GameObjects.Sprite {
+export class PowerUp extends Phaser.GameObjects.Sprite {
   body: Phaser.Physics.Arcade.Body
 
   constructor({ scene, x, y, texture }: Config) {
@@ -41,10 +41,7 @@ export default class PowerUpClass extends Phaser.GameObjects.Sprite {
   /**
    * 与玩家接触时的回调
    */
-  onOverlap(
-    obj1: Phaser.Types.Physics.Arcade.GameObjectWithBody,
-    obj2: Phaser.Types.Physics.Arcade.GameObjectWithBody
-  ) {
+  onOverlap(powerUp: PowerUp, player: Player) {
     this.scene.sound.playAudioSprite('sfx', 'smb_powerup')
     this.destroy()
   }
@@ -54,10 +51,11 @@ export default class PowerUpClass extends Phaser.GameObjects.Sprite {
    * @param player 玩家
    * @param callback 接触后的回调函数
    */
-  public overlap(player: Player, callback: ArcadePhysicsCallback) {
-    this.scene.physics.add.overlap(this, player, (obj1, obj2) => {
-      callback?.(obj1, obj2)
-      this.onOverlap(obj1, obj2)
+  public overlap(player: Player, callback: Function) {
+    // @ts-ignore
+    this.scene.physics.add.overlap(this, player, (powerUp: PowerUp, player: Player) => {
+      callback?.(powerUp, player)
+      this.onOverlap(powerUp, player)
     })
     return this
   }

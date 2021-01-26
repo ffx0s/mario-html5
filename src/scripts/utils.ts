@@ -18,16 +18,15 @@ export function removeArrayMember(array: Arr = [], fn: Function) {
 }
 
 /**
- * 解析 tiled 导出的属性数组，将其转换成对象的形式
- * @param properties 属性数组
+ * 将属性数组转换成对象的形式
+ * @param arrayProps 属性数组
  */
-export function parseTiledProperties(properties: any) {
-  if (Array.isArray(properties)) {
-    const object = {}
-    properties.forEach((prop) => {
-      object[prop.name] = prop.value
+export function arrayProps2ObjProps(arrayProps?: { name: string; value: any }[]) {
+  const props = {}
+  if (Array.isArray(arrayProps)) {
+    arrayProps.forEach((prop) => {
+      props[prop.name] = prop.value
     })
-    return object
   }
-  return {}
+  return props
 }

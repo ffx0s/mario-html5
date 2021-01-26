@@ -1,4 +1,4 @@
-import PowerUp from './powerUpClass'
+import { PowerUp } from './index'
 import { score } from '../../helpers/decorators'
 
 type Config = {
@@ -10,7 +10,7 @@ type Config = {
   speed?: number
 }
 
-export default class Mushroom extends PowerUp {
+export class Mushroom extends PowerUp {
   body: Phaser.Physics.Arcade.Body
   speed: number
   type: string

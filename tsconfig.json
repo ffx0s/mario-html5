@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "target": "es5",
     "module": "commonjs",
     "strict": true,
@@ -9,6 +10,10 @@
     "allowUnreachableCode": false,
     "sourceMap": true,
     "strictPropertyInitialization": false,
-    "lib": ["dom", "es5", "esnext"]
-  }
+    "lib": ["dom", "es5", "esnext"],
+  },
+  "inclue": [
+    "src",
+    "src/types/*.d.ts"
+  ]
 }

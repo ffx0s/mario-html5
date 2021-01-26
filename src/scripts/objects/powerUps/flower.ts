@@ -1,4 +1,4 @@
-import PowerUp from './powerUpClass'
+import { PowerUp } from './index'
 import { score } from '../../helpers/decorators'
 
 type Config = {
@@ -8,7 +8,7 @@ type Config = {
   texture: string
 }
 
-export default class Flower extends PowerUp {
+export class Flower extends PowerUp {
   body: Phaser.Physics.Arcade.Body
 
   constructor({ scene, x, y, texture }: Config) {

@@ -1,9 +1,6 @@
-import Invincible from '../powers/invincible'
-import Large from '../powers/large'
-import Fire from '../powers/fire'
+import { PowerManage } from '../powers'
+import { Enemy } from '../objects/enemies'
 import { lives } from '../helpers/decorators'
-
-type Power = Invincible | Large | Fire
 
 type Config = {
   scene: Phaser.Scene
@@ -11,94 +8,39 @@ type Config = {
   y: number
   texture: string
   frame: string
-  options?: Options
-}
-
-interface Options {
-  ax: number
-  vy: number
-  maxVx: number
-  maxVy: number
-  defaultSize: number[]
-  jumpDuration: number
-  stopSpeed: number
+  // 玩家的能力
+  allowPowers: Function[]
 }
 
 /**
- * 玩家参数
+ * 玩家
  */
-const defaultOptions = {
-  /**
-   * 移动时的加速度
-   */
-  ax: 250,
-  /**
-   * 跳跃时的速度
-   */
-  vy: -200,
-  /**
-   * 最大移动速度
-   */
-  maxVx: 200,
-  /**
-   * 最大跳跃速度
-   */
-  maxVy: 300,
-  /**
-   * 初始大小
-   */
-  defaultSize: [8, 16],
-  /**
-   * 跳跃持续时间，越大跳得越高
-   */
-  jumpDuration: 220,
-  /**
-   * 当速度小于指定值时停止移动
-   */
-  stopSpeed: 30,
-}
-
 export default class Player extends Phaser.GameObjects.Sprite {
   body: Phaser.Physics.Arcade.Body
   /**
-   * 玩家的能力
+   * 能力管理
    */
-  power = {}
+  powers: PowerManage
   /**
    * 是否死亡
    */
-  dead: boolean = false
-  /**
-   * 死亡回调函数
-   */
-  onDie: Function = function () {}
+  dead = false
   /**
    * 是否受保护
    */
-  protected: boolean = false
+  protected = false
   /**
    * 玩家动画 key 后缀
    */
   animSuffix = ''
-  /**
-   * 人物参数
-   */
-  options: Options
-  /**
-   * 当前跳跃持续时间的计数
-   */
-  jumpTimer = 0
 
-  constructor({ scene, x, y, texture, frame, options }: Config) {
+  constructor({ scene, x, y, texture, frame, allowPowers }: Config) {
     super(scene, x, y, texture, frame)
     scene.physics.world.enable(this)
     scene.add.existing(this)
-
-    this.options = { ...defaultOptions, ...options }
-
+    this.body.setSize(8, 16)
     this.makeAnimaions()
-
-    this.body.setSize(...this.options.defaultSize).setMaxVelocity(this.options.maxVx, this.options.maxVy)
+    this.powers = new PowerManage(this, allowPowers)
   }
 
   /**
@@ -207,90 +149,12 @@ export default class Player extends Phaser.GameObjects.Sprite {
     })
   }
 
-  /**
-   * 玩家移动
-   * @param ax 移动时的加速度
-   */
-  walk(ax: number) {
-    this.body.setAccelerationX(ax)
-  }
+  update(time: number, delta: number, cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
+    if (this.dead) return
 
-  /**
-   * 停止移动
-   */
-  stopWalk() {
-    this.body.setAcceleration(0, 0)
-    this.body.setVelocityX(0)
-  }
+    this.powers.allowPowers.some((name) => this.powers.get(name)?.update?.(time, delta, this, cursors))
 
-  /**
-   * 跳跃
-   * @param vy 跳跃的速度
-   */
-  jump(vy = this.options.vy) {
-    this.body.setVelocityY(vy)
-    const name = 'smb_jump-' + (this.hasPower(Large.name) ? 'super' : 'small')
-    this.scene.sound.playAudioSprite('sfx', name)
-  }
-
-  update(cursors: Phaser.Types.Input.Keyboard.CursorKeys, time: number, delta: number) {
-    if (this.scene.physics.world.isPaused || this.dead) return
-
-    const { ax, vy, stopSpeed, jumpDuration } = this.options
-    const velocity = this.body.velocity
-    const animSuffix = this.animSuffix
-
-    // 移动
-    if (cursors.left.isDown) {
-      this.setFlipX(true)
-      this.walk(-ax - (velocity.x > 0 ? velocity.x * 2 : 0))
-    } else if (cursors.right.isDown) {
-      this.setFlipX(false)
-      this.walk(ax + (velocity.x < 0 ? -velocity.x * 2 : 0))
-    } else {
-      if (Math.abs(velocity.x) < stopSpeed) {
-        this.stopWalk()
-      } else {
-        // 速度在10以上时会有一个减速的效果
-        this.body.setAccelerationX((velocity.x < 0 ? 1 : -1) * ax)
-      }
-    }
-
-    // 跳跃：长按和短按跳跃
-    const upSpaceDown = cursors.up.isDown || cursors.space.isDown
-    if (upSpaceDown && this.body.blocked.down) {
-      this.jumpTimer = time
-      this.jump()
-    } else if (upSpaceDown && this.jumpTimer !== 0) {
-      if (time - this.jumpTimer > jumpDuration) {
-        this.jumpTimer = 0
-      } else {
-        this.body.setVelocityY(vy)
-      }
-    } else if (this.jumpTimer !== 0) {
-      this.jumpTimer = 0
-    }
-
-    // 动画
-    if (this.body.blocked.down) {
-      if (cursors.down.isDown && this.hasPower(Large.name)) {
-        this.anims.play('bend' + animSuffix, true)
-        this.stopWalk()
-      } else {
-        if ((cursors.left.isDown && velocity.x > 0) || (cursors.right.isDown && velocity.x < 0)) {
-          this.anims.play('turn' + animSuffix, true)
-        } else {
-          this.anims.play((Math.abs(velocity.x) >= 10 ? 'run' : 'stand') + animSuffix, true)
-        }
-      }
-    } else {
-      this.anims.play('jump' + animSuffix, true)
-    }
-
-    ;[Fire, Invincible].some(({ name }) => {
-      return this.power[name]?.update?.(this, cursors, time, delta)
-    })
-
+    // 如果不在地图的可视范围内则死亡
     if (this.x < 0 || this.y > this.scene.sys.game.canvas.height) {
       this.die()
     }
@@ -302,44 +166,28 @@ export default class Player extends Phaser.GameObjects.Sprite {
   @lives(-1)
   die() {
     this.dead = true
-    this.anims.play('dead')
-    // @ts-ignore
-    this.scene.music.pause()
+    this.scene.sound.stopAll()
     this.scene.sound.playAudioSprite('sfx', 'smb_mariodie')
+    this.body.checkCollision.none = true
     this.body.setAcceleration(0, 0).setVelocity(0, -200)
-    this.onDie()
+    this.anims.play('dead')
+    this.emit('die')
   }
 
   /**
-   * 给玩家添加能力
-   * @param name 能力名称
-   * @param object 具体能力的对象
-   * @param replace 是否替换已有的对象
+   * 接触敌人时调用该方法
+   * @param enemy 敌人
+   * @param stepOnEnemy 玩家是否踩到敌人
    */
-  addPower(name: string, object: Power, replace = false) {
-    if (replace) {
-      this.removePower(name)
-    }
-    if (!this.power[name]) {
-      this.power[name] = object
-    }
+  overlapEnemy(enemy: Enemy, stepOnEnemy: boolean) {
+    return this.powers.allowPowers.some((name) => this.powers.get(name)?.overlapEnemy?.(this, enemy, stepOnEnemy))
   }
 
   /**
-   * 移除玩家的能力
-   * @param name 能力名称
+   * 接触地图时调用该方法
+   * @param tile tile
    */
-  removePower(name: string) {
-    if (this.power[name]) {
-      this.power[name] = null
-    }
-  }
-
-  /**
-   * 判断玩家是否有某项能力，如果有则返回该能力的对象
-   * @param name 能力名称
-   */
-  hasPower(name: string) {
-    return this.power[name]
+  colliderWorld(tile: Phaser.Tilemaps.Tile) {
+    return this.powers.allowPowers.some((name) => this.powers.get(name)?.colliderWorld?.(this, tile))
   }
 }

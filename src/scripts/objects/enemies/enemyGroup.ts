@@ -1,7 +1,5 @@
 import Player from '../player'
-import Enemy from '../enemies/enemyClass'
-import Goomba from '../enemies/goomba'
-import Turtle from './turtle'
+import { Enemy, Goomba, Turtle } from './index'
 import { removeArrayMember } from '../../utils'
 
 export type EnemyName = 'goomba' | 'turtle'
@@ -15,7 +13,7 @@ export interface EnemyData {
 /**
  * 存储敌人的 Group
  */
-export default class EnemyGroup extends Phaser.GameObjects.Group {
+export class EnemyGroup extends Phaser.GameObjects.Group {
   /**
    * 创建敌人时所需要的数据
    */
@@ -70,7 +68,7 @@ export default class EnemyGroup extends Phaser.GameObjects.Group {
     return enemy
   }
 
-  update(player: Player, time: number, delta: number) {
+  update(time: number, delta: number, player: Player) {
     const canvas = this.scene.sys.game.canvas
     const canvasWidth = canvas.width
     const canvasHeight = canvas.height

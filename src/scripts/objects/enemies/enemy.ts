@@ -1,16 +1,12 @@
 import Player from '../player'
 import { score } from '../../helpers/decorators'
 
-export default class EnemyClass extends Phaser.Physics.Arcade.Sprite {
+export class Enemy extends Phaser.Physics.Arcade.Sprite {
   body: Phaser.Physics.Arcade.Body
   /**
    * 是否死亡
    */
   dead = false
-  /**
-   * 是否禁止与地图进行碰撞检测
-   */
-  disableCollide = false
   /**
    * 是否有攻击能力（当为真时接触玩家，玩家死亡）
    */
@@ -28,33 +24,31 @@ export default class EnemyClass extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, texture, frame)
     scene.add.existing(this)
     scene.physics.add.existing(this)
-    this.deadAnimKey = deadAnimKey
     this.setOrigin(0, 1)
+    this.deadAnimKey = deadAnimKey
   }
 
   /**
-   * 与玩家接触时触发
+   * 接触玩家时调用该方法
    * @param player
-   * @param stepOn 玩家是否踩到敌人
+   * @param stepOnEnemy 玩家是否踩到敌人
    */
-  overlapPlayer(player: Player, stepOn: boolean) {
+  overlapPlayer(player: Player, stepOnEnemy: boolean): boolean | void {
     // 被踩到默认直接死亡
-    if (stepOn) {
+    if (stepOnEnemy) {
       this.die()
     }
-
-    return false
   }
 
   /**
-   * 与另外一个敌人接触时触发
+   * 与另外一个敌人接触时调用
    * @param enemy 另一个敌人
    */
-  overlapEnemy(enemy: EnemyClass) {}
+  overlapEnemy(enemy: Enemy) {}
 
   /**
-   * 与地图接触时触发
-   * @param tile 接触的对象
+   * 与地图接触时调用
+   * @param tile
    */
   colliderWorld(tile: Phaser.Tilemaps.Tile) {}
 
@@ -70,7 +64,7 @@ export default class EnemyClass extends Phaser.Physics.Arcade.Sprite {
     this.scene.sound.playAudioSprite('sfx', 'smb_stomp')
 
     if (flipY) {
-      this.disableCollide = true
+      this.body.checkCollision.none = true
       this.setFlipY(true)
       this.setVelocity(0, -100)
     } else {
@@ -97,8 +91,8 @@ export default class EnemyClass extends Phaser.Physics.Arcade.Sprite {
    */
   restore(x: number, y: number) {
     this.dead = false
-    this.disableCollide = false
     this.attackPower = true
+    this.body.checkCollision.none = false
     this.enableBody(true, x, y, true, true).clearAlpha().resetFlip()
   }
 }

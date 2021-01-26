@@ -1,94 +1,30 @@
+import config from '../config'
 import AnimatedTiles from '../helpers/animatedTiles'
 import Debug from '../helpers/debug'
 import CountDown from '../helpers/countdown'
+
 import Hud from '../objects/hud'
 import Player from '../objects/player'
 import Brick from '../objects/brick'
 import CoinSpin from '../objects/coinSpin'
-import Mushroom from '../objects/powerUps/mushroom'
-import Flower from '../objects/powerUps/flower'
-import Star from '../objects/powerUps/star'
-import Enemy from '../objects/enemies/enemyClass'
 import Flag from '../objects/flag'
-import Invincible from '../powers/invincible'
-import Large from '../powers/large'
-import Fire from '../powers/fire'
-import EnemyGroup, { EnemyData, EnemyName } from '../objects/enemies/enemyGroup'
-import PowerUpGroup from '../objects/powerUps/powerUpGroup'
-import { parseTiledProperties } from '../utils'
+import { Enemy, EnemyGroup, EnemyName } from '../objects/enemies'
+import { PowerUpGroup, Mushroom, Flower, Star } from '../objects/powerUps'
 
-/**
- * 房间信息
- */
-interface rooms {
-  [name: string]: {
-    /**
-     * 房间名
-     */
-    name: string
-    /**
-     * 坐标
-     */
-    x: number
-    y: number
-    /**
-     * 大小
-     */
-    width: number
-    height: number
-  }
-}
-
-/**
- * 目的地坐标信息
- */
-interface dests {
-  [name: string]: {
-    /**
-     * 目的地名称
-     */
-    name: string
-    /**
-     * 方向
-     */
-    direction?: string
-    /**
-     * 坐标
-     */
-    x: number
-    y: number
-  }
-}
+import { Move, Jump, Large, Fire, Invincible, EnterPipe, HitBrick } from '../powers'
+import { arrayProps2ObjProps } from '../utils'
+import { container } from 'tsyringe'
 
 type SceneData = {
   [prop: string]: any
 }
 
-/**
- * 游戏配置
- */
-const gameConfig = {
-  /**
-   * 游戏结束倒计时（秒）
-   */
-  playTime: 60 * 3,
-  /**
-   * 玩家生命数
-   */
-  lives: 3,
-}
-
 export default class MainScene extends Phaser.Scene {
   music: Phaser.Sound.BaseSound
-  map: Phaser.Tilemaps.Tilemap
   cursors: Phaser.Types.Input.Keyboard.CursorKeys
   animatedTiles: AnimatedTiles
-  worldLayer: Phaser.Tilemaps.TilemapLayer
   hud: Hud
   mario: Player
-  brick: Brick
-  flag: Flag
-  blockEmitter: Phaser.GameObjects.Particles.ParticleEmitterManager
   powerUpGroup: PowerUpGroup
   enemyGroup: EnemyGroup
   rooms: rooms = {}
@@ -99,178 +35,157 @@ export default class MainScene extends Phaser.Scene {
   }
 
   create(sceneData: SceneData) {
-    // @ts-ignore
-    window.myGame = this
+    // @ts-ignore debug
+    window.__myGame = this
 
-    // 背景音乐
+    const map = this.make.tilemap({ key: 'map' })
+    const tileset = map.addTilesetImage('SuperMarioBros-World1-1', 'tiles')
+    const worldLayer = map.createLayer('world', tileset).setCollisionByProperty({ collide: true })
+
+    this.cursors = this.input.keyboard.createCursorKeys()
+
+    // 添加背景音乐
     this.music = this.sound.add('overworld')
-    this.music.play({
-      loop: true,
-    })
+    this.music.play({ loop: true })
 
-    this.map = this.make.tilemap({
-      key: 'map',
-    })
+    // 添加游戏背景
+    this.add.tileSprite(0, 0, worldLayer.width, 500, 'background-clouds')
 
-    const tileset = this.map.addTilesetImage('SuperMarioBros-World1-1', 'tiles')
-    this.worldLayer = this.map.createLayer('world', tileset).setCollisionByProperty({ collide: true })
+    // 添加游戏说明
+    this.add.bitmapText(16, 100, 'font', config.helpText, 8).setDepth(100)
 
-    this.add.tileSprite(0, 0, this.worldLayer.width, 500, 'background-clouds')
-    this.add.bitmapText(16, 100, 'font', 'ARROW KEYS MOVE\n\nZ TO FIRE', 8).setDepth(100)
+    // tile 动画
+    this.animatedTiles = new AnimatedTiles(map, tileset)
 
-    this.blockEmitter = this.add.particles('atlas')
-    // 砖块破碎效果
-    this.blockEmitter.createEmitter({
-      frame: {
-        frames: ['brick'],
-        cycle: true,
-      },
-      gravityY: 1000,
-      lifespan: 2000,
-      speed: 400,
-      angle: {
-        min: -90 - 25,
-        max: -45 - 25,
-      },
-      frequency: -1,
-    })
+    this.parseModifiersLayer(map, 'modifiers')
 
-    this.parseModifiersLayer('modifiers')
-
-    const enemiesData = this.parseEnemiesLayer('enemies')
+    const enemiesData = this.parseEnemiesLayer(map, 'enemies')
     this.enemyGroup = new EnemyGroup(this, enemiesData)
-
     this.powerUpGroup = new PowerUpGroup(this)
-
-    // 创建 tile 动画
-    this.animatedTiles = new AnimatedTiles(this.map, tileset)
 
     // 分数、金币、倒计时等信息显示
     this.hud = new Hud(this, [
       { title: 'SCORE', key: 'score', value: 0 },
       { title: 'COINS', key: 'coins', value: sceneData.coins || 0 },
-      { title: 'TIME', key: 'time', value: gameConfig.playTime },
-      { title: 'LIVES', key: 'lives', value: sceneData.lives || gameConfig.lives },
+      { title: 'TIME', key: 'time', value: config.playTime },
+      { title: 'LIVES', key: 'lives', value: sceneData.lives || config.lives },
       { title: 'FPS', key: 'fps', value: () => Math.floor(this.game.loop.actualFps) },
     ])
-
-    // 游戏时间倒计时更新
-    new CountDown().start(
-      this,
-      gameConfig.playTime,
-      (time: number) => {
-        this.hud.setValue('time', time)
-      },
-      () => this.mario.die()
-    )
-
-    // 调试
-    new Debug({ scene: this, layer: this.worldLayer })
 
     this.mario = new Player({
       scene: this,
       texture: 'atlas',
       frame: 'mario/stand',
-      x: 16 * 6,
-      y: 100,
-    })
-    this.mario.onDie = () => {
-      this.time.addEvent({
-        delay: 3000,
-        callback: () => {
-          // @ts-ignore
-          const { coins, lives } = this.hud
-          this.scene.restart({
-            coins: coins.value,
-            lives: lives.value,
-          })
-        },
+      x: config.initX,
+      y: config.initY,
+      allowPowers: [Jump, Move, Invincible, Large, Fire, EnterPipe, HitBrick],
+    }).on('die', () => {
+      this.time.delayedCall(3000, () => {
+        if (this.hud.getValue('lives') === 0) {
+          this.gameOver()
+        } else {
+          this.restartGame()
+        }
       })
-    }
-    this.brick = new Brick({ scene: this })
-
-    // 终点
-    const endPoint = this.worldLayer.findByIndex(5)
-    // 终点旗杆
-    this.flag = new Flag(this, endPoint.pixelX, endPoint.pixelY).overlap(this.mario, () => {
-      this.scene.restart()
     })
 
-    this.cursors = this.input.keyboard.createCursorKeys()
+    const endPoint = worldLayer.findByIndex(5)
+    // 终点旗杆
+    new Flag(this, endPoint.pixelX, endPoint.pixelY).overlap(this.mario, () => this.restartGame(false))
+
+    // 游戏倒计时
+    new CountDown(this)
+      .start(config.playTime)
+      .on('interval', (time: number) => {
+        this.hud.setValue('time', time)
+      })
+      .on('end', () => this.mario.die())
+
+    // 调试
+    new Debug({ scene: this, layer: worldLayer })
+
+    // 砖块对象
+    const brick = new Brick({ scene: this })
+
+    // 在容器里注册这些对象，用于提供给依赖它们的类自动注入
+    container
+      .register('Map', { useValue: map })
+      .register('WorldLayer', { useValue: worldLayer })
+      .register('Cursors', { useValue: this.cursors })
+      .register(Brick, { useValue: brick })
+      .register(Player, { useValue: this.mario })
+      .register(EnemyGroup, { useValue: this.enemyGroup })
+      .register(PowerUpGroup, { useValue: this.powerUpGroup })
+
+    this.mario.powers
+      .add(Move, () => new Move(this.mario))
+      .add(Jump, () => new Jump(this.mario))
+      .add(EnterPipe, () => new EnterPipe(this.cursors, this.dests, this.rooms))
+      .add(HitBrick, () => new HitBrick(this.mario, ['up']))
 
     const camera = this.cameras.main
     const room = this.rooms.room1
-    camera.setBounds(room.x, room.y, room.width, room.height)
-    camera.startFollow(this.mario)
+    camera.setBounds(room.x, room.y, room.width, room.height).startFollow(this.mario)
     camera.roundPixels = true
 
-    this.physics.add.collider(
-      this.enemyGroup,
-      this.worldLayer,
-      // @ts-ignore
-      this.enemyColliderWorld,
-      (enemy: Enemy) => {
-        return !enemy.disableCollide
-      },
-      this
-    )
-    this.physics.add.collider(this.powerUpGroup, this.worldLayer)
+    this.physics.add.collider(this.powerUpGroup, worldLayer)
     // @ts-ignore
-    this.physics.add.collider(this.mario, this.worldLayer, this.playerColliderWorld, () => !this.mario.dead, this)
-
-    this.physics.add.collider(this.brick, this.powerUpGroup)
+    this.physics.add.collider(this.enemyGroup, worldLayer, this.enemyColliderWorld, undefined, this)
     // @ts-ignore
-    this.physics.add.collider(this.brick, this.enemyGroup, this.brickColliderEnemy, undefined, this)
-
+    this.physics.add.collider(this.mario, worldLayer, this.playerColliderWorld, undefined, this)
     // @ts-ignore
     this.physics.add.overlap(this.mario, this.enemyGroup, this.playerOverlapEnemy, undefined, this)
     // @ts-ignore
     this.physics.add.overlap(this.enemyGroup, this.enemyGroup, this.enemyOverlapEnemy, undefined, this)
+    // @ts-ignore
+    this.physics.add.collider(brick, this.enemyGroup, this.brickColliderEnemy, undefined, this)
+    this.physics.add.collider(brick, this.powerUpGroup)
   }
 
   update(time: number, delta: number) {
-    this.animatedTiles.update(delta)
-    this.hud.update()
-    this.mario.update(this.cursors, time, delta)
-    this.enemyGroup.update(this.mario, time, delta)
-    this.powerUpGroup.update(this.mario, time, delta)
+    if (this.physics.world.isPaused) return
+    const { animatedTiles, hud, mario, cursors, enemyGroup, powerUpGroup } = this
+    animatedTiles.update(delta)
+    hud.update()
+    mario.update(time, delta, cursors)
+    enemyGroup.update(time, delta, mario)
+    powerUpGroup.update(time, delta, mario)
   }
 
   /**
-   * 解析除敌人外与游戏有交互的层
+   * 解析修饰层，扩展瓷砖属性
    * @param name 图层名称
    */
-  private parseModifiersLayer(name: string) {
-    const worldLayer = this.worldLayer
-    const ctx = this
+  private parseModifiersLayer(map: Phaser.Tilemaps.Tilemap, name: string) {
+    const worldLayer = map.getLayer('world').tilemapLayer
     const parser = {
-      powerUp(modifier: Phaser.Types.Tilemaps.TiledObject) {
+      powerUp: (modifier: Phaser.Types.Tilemaps.TiledObject) => {
         const tile = worldLayer.getTileAt(Number(modifier.x) / 16, Number(modifier.y) / 16 - 1)
         tile.properties.powerUp = modifier.name
         switch (modifier.name) {
           case '1up':
             tile.properties.callback = 'questionMark'
-            tile.setCollision(true)
+            tile.setCollision(false, false, false, true)
             break
           case 'coin':
             tile.properties.hitNumber = 4
         }
       },
-      pipe(modifier: Phaser.Types.Tilemaps.TiledObject) {
+      pipe: (modifier: Phaser.Types.Tilemaps.TiledObject) => {
         const tile = worldLayer.getTileAt(Number(modifier.x) / 16, Number(modifier.y) / 16)
         tile.properties.dest = modifier.name
-        Object.assign(tile.properties, parseTiledProperties(modifier.properties))
+        Object.assign(tile.properties, arrayProps2ObjProps(modifier.properties))
       },
-      dest({ name, x, y, properties }: Phaser.Types.Tilemaps.TiledObject) {
-        ctx.dests[name] = {
+      dest: ({ name, x, y, properties }: Phaser.Types.Tilemaps.TiledObject) => {
+        this.dests[name] = {
           name,
           x: Number(x),
           y: Number(y),
+          ...arrayProps2ObjProps(properties),
         }
-        Object.assign(ctx.dests[name], parseTiledProperties(properties))
       },
-      room({ name, x, y, width, height }: Phaser.Types.Tilemaps.TiledObject) {
-        ctx.rooms[name] = {
+      room: ({ name, x, y, width, height }: Phaser.Types.Tilemaps.TiledObject) => {
+        this.rooms[name] = {
           name,
           x: Number(x),
           y: Number(y),
@@ -279,8 +194,9 @@ export default class MainScene extends Phaser.Scene {
         }
       },
     }
-    this.map.getObjectLayer(name).objects.forEach((modifier) => {
-      parser[modifier.type]?.(modifier)
+
+    map.getObjectLayer(name).objects.forEach((tiled) => {
+      parser[tiled.type]?.(tiled)
     })
   }
 
@@ -288,16 +204,12 @@ export default class MainScene extends Phaser.Scene {
    * 解析敌人图层，获取敌人的坐标数据
    * @param name 图层名称
    */
-  private parseEnemiesLayer(name: string) {
-    const enemiesData: EnemyData[] = []
-    this.map.getObjectLayer(name).objects.forEach((tile) => {
-      enemiesData.push({
-        name: tile.name as EnemyName,
-        x: tile.x as number,
-        y: tile.y as number,
-      })
-    })
-    return enemiesData
+  private parseEnemiesLayer(map: Phaser.Tilemaps.Tilemap, name: string) {
+    return map.getObjectLayer(name).objects.map((tile) => ({
+      name: tile.name as EnemyName,
+      x: tile.x as number,
+      y: tile.y as number,
+    }))
   }
 
   private enemyColliderWorld(enemy: Enemy, tile: Phaser.Tilemaps.Tile) {
@@ -309,237 +221,79 @@ export default class MainScene extends Phaser.Scene {
     enemy2.overlapEnemy(enemy1)
   }
 
-  /**
-   * 玩家与敌人接触时触发
-   * @param mario 玩家
-   * @param enemy 敌人
-   */
   private playerOverlapEnemy(mario: Player, enemy: Enemy) {
     if (enemy.dead || mario.dead) return
 
-    let isBreak = [Invincible, Fire, Large].some(({ name }) => this.mario.power?.[name]?.overlapEnemy(mario, enemy))
-    if (isBreak) return
+    // body.touching 对象会出现多个为 true 的值，为避免错误，加上了玩家速度的判断。
+    const stepOnEnemy = mario.body.touching.down && enemy.body.touching.up && mario.body.velocity.y !== 0
 
-    // Bug: body.touching 会出现多个为true的值
-    // 解决：加多一个速度的判断
-    const stepOnEmeny = mario.body.touching.down && enemy.body.touching.up && mario.body.velocity.y !== 0
+    if (mario.overlapEnemy(enemy, stepOnEnemy)) return
+    if (enemy.overlapPlayer(mario, stepOnEnemy)) return
 
-    if (enemy.overlapPlayer(mario, stepOnEmeny)) return
-
-    if (stepOnEmeny) {
+    if (stepOnEnemy) {
       mario.body.setVelocityY(-80)
     } else if (!mario.protected && enemy.attackPower) {
       mario.die()
     }
   }
 
-  /**
-   * 玩家与地图接触时触发
-   * @param mario 玩家
-   * @param tile 目标 tile
-   */
   private playerColliderWorld(mario: Player, tile: Phaser.Tilemaps.Tile) {
-    const properties = tile.properties
-    if (!properties) return
-
-    // 出入管道
-    if (properties.dest) {
-      if (this.cursors[properties.direction].isDown) {
-        this.pipeAnimation(properties.direction, () => {
-          const { x, y, direction } = this.dests[properties.dest]
-          this.moveTo(x + mario.width, y + this.mario.height / 2)
-          if (direction) {
-            this.pipeAnimation(direction)
-          }
-        })
-      }
-    }
-
-    // 玩家撞击砖块
-    if (this.mario.body.blocked.up) {
-      // 重置跳跃的计时，阻止维持的跳跃速度
-      this.mario.jumpTimer = 0
-
-      // 查找离玩家位置最近的砖块
-      let collideTile = tile
-      const nextTile = this.worldLayer.getTileAt(tile.x + 1, tile.y)
-      if (nextTile?.properties?.callback) {
-        const xpos = this.mario.x - this.mario.width / 2
-        if (Math.abs(xpos - nextTile.pixelX) < Math.abs(xpos - tile.pixelX)) {
-          collideTile = nextTile
-        }
-      }
-
-      // 有设置回调函数名则执行对应回调
-      if (collideTile?.properties?.callback) {
-        const { callback } = collideTile.properties
-        if (this[callback]) {
-          this[callback](collideTile)
-          // 玩家顶到砖块时，砖块需要有一个上移的动画：
-          this.brick.show(collideTile.pixelX, collideTile.pixelY)
-          this.tweens.add({
-            targets: collideTile,
-            pixelY: collideTile.pixelY - 4,
-            duration: 100,
-            ease: 'Cubic.easeOut',
-            onComplete: () => {
-              this.brick.hide()
-              collideTile.pixelY = collideTile.y * 16
-            },
-            yoyo: true,
-          })
-        }
-      }
-    }
+    if (mario.colliderWorld(tile)) return
   }
 
   private brickColliderEnemy(brick: Brick, enemy: Enemy) {
     if (enemy.dead) return
-    if (this.mario.hasPower(Large.name)) {
+    if (this.mario.powers.has(Large)) {
       enemy.die(true)
     }
   }
 
   /**
-   * 撞破砖块的效果
-   * @param tile 目标
-   */
-  public breakBrick(tile: Phaser.Tilemaps.Tile) {
-    this.map.removeTileAt(tile.x, tile.y, true, true, this.worldLayer)
-    this.blockEmitter.emitParticle(6, tile.x * 16, tile.y * 16)
-    this.sound.playAudioSprite('sfx', 'smb_breakblock')
-  }
-
-  /**
-   * 玩家撞击普通砖块时触发
-   * @param tile 撞击目标
-   */
-  private breakable(tile: Phaser.Tilemaps.Tile) {
-    if (this.mario.hasPower(Large.name)) {
-      this.breakBrick(tile)
-    } else {
-      this.sound.playAudioSprite('sfx', 'smb_bump')
-    }
-  }
-
-  /**
-   * 玩家撞击“问号”砖块时触发
-   * @param tile 撞击目标
-   */
-  private questionMark(tile: Phaser.Tilemaps.Tile) {
-    if (!tile.properties.hitNumber) {
-      tile.properties.stopAnimation = true
-      tile.properties.callback = null
-      tile.index = 44
-    }
-
-    const powerUp = tile.properties.powerUp
-
-    if (powerUp) {
-      this.createPowerUp(powerUp, tile)
-    } else {
-      new CoinSpin(this, tile.pixelX + 8, tile.pixelY - 10, 'atlas').spin()
-    }
-  }
-
-  /**
-   * 创建对应道具
+   * 创建道具
    * @param name 道具名
-   * @param tile tile
    */
-  private createPowerUp(name: string, tile: Phaser.Tilemaps.Tile) {
-    const baseOptions = {
-      scene: this,
-      x: tile.pixelX + 8,
-      y: tile.pixelY - 10,
-      texture: 'atlas',
-    }
-    let powerUp: Flower | Mushroom | Star | undefined
+  private createPowerUp(name: string, x: number, y: number) {
+    const mario = this.mario
+    let params: any[] = []
 
     switch (name) {
       case 'mushroom':
-        if (this.mario.hasPower(Large.name)) {
-          powerUp = new Flower({ ...baseOptions }).overlap(this.mario, () => {
-            new Fire(this.mario, this.worldLayer, this.enemyGroup)
-          })
-        } else {
-          powerUp = new Mushroom({ ...baseOptions, type: 'super' }).overlap(this.mario, () => {
-            new Large(this.mario)
-          })
-        }
+        params = mario.powers.has(Large) ? [Flower, Fire] : [Mushroom, Large, { type: 'super' }]
         break
       case 'star':
-        powerUp = new Star({ ...baseOptions }).overlap(this.mario, () => {
-          new Invincible(this.mario)
-        })
+        params = [Star, Invincible]
         break
       case '1up':
-        powerUp = new Mushroom({ ...baseOptions, type: '1up' }).overlap(this.mario, () => {
-          this.hud.incDec('lives', 1)
-        })
+        params = [Mushroom, null, { type: '1up' }, () => this.hud.incDec('lives', 1)]
         break
-      case 'coin':
-        tile.properties.hitNumber--
-        new CoinSpin(this, tile.pixelX + 8, tile.pixelY - 10, 'atlas').spin()
-        break
+      default:
+        new CoinSpin(this, x, y, 'atlas').spin()
     }
 
-    if (powerUp) {
+    const [PowerUp, Power, options, onOverlap] = params
+    if (PowerUp) {
+      const powerUp = new PowerUp({ scene: this, x, y, texture: 'atlas', ...options }).overlap(
+        mario,
+        onOverlap || (() => mario.powers.add(Power, () => new Power(mario)))
+      )
       this.powerUpGroup.add(powerUp)
     }
   }
 
-  /**
-   * 进出管道的动画
-   * @param direction 方向
-   * @param callback 动画完成的回调
-   */
-  private pipeAnimation(direction: string, callback?: Function) {
-    if (this.physics.world.isPaused) return
-
-    this.mario
-      .play('stand' + this.mario.animSuffix, true)
-      .setDepth(-1)
-      .body.stop()
-
-    this.physics.world.pause()
-    this.sound.playAudioSprite('sfx', 'smb_pipe')
-
-    const propMap = {
-      down: ['y', 1],
-      up: ['y', -1],
-      right: ['x', 1],
-      left: ['x', -1],
-    }
-    const [prop, value] = propMap[direction]
-
-    this.tweens.add({
-      targets: this.mario,
-      [prop]: this.mario[prop] + this.mario.height * value,
-      duration: 800,
-      ease: 'Cubic.easeOut',
-      onComplete: () => {
-        this.physics.world.resume()
-        this.mario.setDepth(1)
-        callback?.()
-      },
-    })
+  private restartGame(saveData = true) {
+    const data = saveData
+      ? {
+          coins: this.hud.getValue('coins'),
+          lives: this.hud.getValue('lives'),
+        }
+      : {}
+    container.clearInstances()
+    this.scene.restart(data)
   }
 
-  /**
-   * 将玩家移动到指定坐标，并更新相机边界
-   * @param x
-   * @param y
-   */
-  private moveTo(x: number, y: number) {
-    Object.values(this.rooms)
-      .sort((a, b) => a.x - b.x)
-      .some((room) => {
-        if (x < room.x + room.width) {
-          this.cameras.main.setBounds(room.x, room.y, room.width, room.height)
-          return true
-        }
-      })
-    this.mario.setX(x).setY(y)
+  private gameOver() {
+    if (window.confirm('GameOver!')) {
+      this.restartGame(false)
+    }
   }
 }

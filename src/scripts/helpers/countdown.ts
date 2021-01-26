@@ -1,22 +1,30 @@
-export default class CountDown {
+export default class CountDown extends Phaser.Events.EventEmitter {
   private timedEvent: Phaser.Time.TimerEvent
-  public current: number
+  private scene: Phaser.Scene
+  private current: number
+  private delay = 1000
 
-  constructor() {}
+  constructor(scene: Phaser.Scene) {
+    super()
+    this.scene = scene
+  }
 
-  start(scene: Phaser.Scene, current = 250, callback?: Function, endCallback?: Function) {
-    this.current = current
-    this.timedEvent = scene.time.addEvent({
-      delay: 1000,
+  start(time = 250) {
+    this.current = time
+    this.timedEvent?.remove()
+    this.timedEvent = this.scene.time.addEvent({
+      delay: this.delay,
       callback: () => {
         this.current--
-        callback?.(this.current)
+        this.emit('interval', this.current)
         if (this.current === 0) {
-          endCallback?.(this.current)
           this.timedEvent.remove()
+          this.emit('end', this.current)
         }
       },
       loop: true,
     })
+
+    return this
   }
 }
