@@ -1,5 +1,4 @@
-# 超级玛丽 HTML5
-
+# 超级玛丽Web版
 <a href="https://ffx0s.github.io/mario-html5/dist/" target="_blank">https://ffx0s.github.io/mario-html5/dist/</a>
 
 <br />
