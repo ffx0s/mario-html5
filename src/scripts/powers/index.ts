@@ -7,7 +7,7 @@ import { Invincible } from './invincible'
 import { Large } from './large'
 import { Fire } from './fire'
 import { EnterPipe } from './enterPipe'
-import { HitBrick } from './HitBrick'
+import { HitBrick } from './hitBrick'
 
 export { Jump, Move, Invincible, Large, Fire, EnterPipe, HitBrick }
 
